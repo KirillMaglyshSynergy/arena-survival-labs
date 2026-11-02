@@ -11,6 +11,8 @@ namespace ArenaSurvival.Tests
 {
     public sealed class ArenaTests
     {
+        private readonly InputTestFixture inputFixture = new InputTestFixture();
+        private int previousCaptureFramerate;
         private Keyboard keyboard;
         private GameObject player;
         private PlayerFallRespawner respawner;
@@ -18,7 +20,11 @@ namespace ArenaSurvival.Tests
         [UnitySetUp]
         public IEnumerator SetUp()
         {
+            inputFixture.Setup();
+            previousCaptureFramerate = Time.captureFramerate;
+            Time.captureFramerate = 60;
             keyboard = InputSystem.AddDevice<Keyboard>();
+            keyboard.MakeCurrent();
             yield return SceneManager.LoadSceneAsync("Arena_01");
             yield return null;
             yield return new WaitForSeconds(0.3f);
@@ -36,6 +42,8 @@ namespace ArenaSurvival.Tests
 
             Cursor.lockState = CursorLockMode.None;
             Cursor.visible = true;
+            Time.captureFramerate = previousCaptureFramerate;
+            inputFixture.TearDown();
         }
 
         [UnityTest]
@@ -139,6 +147,45 @@ namespace ArenaSurvival.Tests
             Assert.That(player.transform.position.z, Is.EqualTo(-7).Within(0.05f));
             Assert.That(player.transform.position.y, Is.InRange(-0.12f, 0.2f));
             Assert.That(player.GetComponent<CharacterController>().enabled, Is.True);
+        }
+
+        [UnityTest]
+        public IEnumerator MouseLookClampsVerticalAngle()
+        {
+            Mouse mouse = InputSystem.AddDevice<Mouse>();
+            InputSystem.QueueStateEvent(mouse, new MouseState().WithButton(MouseButton.Left));
+            yield return null;
+            InputSystem.QueueStateEvent(mouse, new MouseState { delta = new Vector2(100, 2000) });
+            yield return null;
+            yield return null;
+            Transform camera = player.GetComponentInChildren<Camera>().transform;
+            Assert.That(Mathf.DeltaAngle(0, player.transform.eulerAngles.y), Is.EqualTo(8).Within(0.5f));
+            Assert.That(Mathf.DeltaAngle(0, camera.localEulerAngles.x), Is.EqualTo(-85).Within(0.5f));
+            Assert.That(Mathf.DeltaAngle(0, player.transform.eulerAngles.x), Is.EqualTo(0).Within(0.1f));
+        }
+
+        [UnityTest]
+        public IEnumerator EscapeStopsLookAndClickResumesIt()
+        {
+            Mouse mouse = InputSystem.AddDevice<Mouse>();
+            InputSystem.QueueStateEvent(mouse, new MouseState().WithButton(MouseButton.Left));
+            yield return null;
+            InputSystem.QueueStateEvent(mouse, new MouseState());
+            InputSystem.QueueStateEvent(keyboard, new KeyboardState(Key.Escape));
+            yield return null;
+            yield return null;
+            float initialYaw = player.transform.eulerAngles.y;
+            InputSystem.QueueStateEvent(keyboard, new KeyboardState());
+            InputSystem.QueueStateEvent(mouse, new MouseState { delta = new Vector2(100, 0) });
+            yield return null;
+            yield return null;
+            Assert.That(Mathf.DeltaAngle(initialYaw, player.transform.eulerAngles.y), Is.EqualTo(0).Within(0.1f));
+            InputSystem.QueueStateEvent(mouse, new MouseState().WithButton(MouseButton.Left));
+            yield return null;
+            InputSystem.QueueStateEvent(mouse, new MouseState { delta = new Vector2(100, 0) });
+            yield return null;
+            yield return null;
+            Assert.That(Mathf.DeltaAngle(initialYaw, player.transform.eulerAngles.y), Is.EqualTo(8).Within(0.5f));
         }
 
         private void Teleport(Vector3 position)

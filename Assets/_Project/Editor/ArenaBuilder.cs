@@ -126,11 +126,15 @@ namespace ArenaSurvival.Editor
             controller.slopeLimit = 45;
             controller.stepOffset = 0.3f;
             controller.skinWidth = 0.08f;
+            controller.minMoveDistance = 0f;
 
             player.AddComponent<PlayerInputReader>();
             player.AddComponent<PlayerMovement>();
             PlayerLook look = player.AddComponent<PlayerLook>();
-            player.AddComponent<ObstaclePusher>();
+            ObstaclePusher pusher = player.AddComponent<ObstaclePusher>();
+            var pushSettings = new SerializedObject(pusher);
+            pushSettings.FindProperty("pushImpulsePerSpeedUnit").floatValue = 0.6f;
+            pushSettings.ApplyModifiedPropertiesWithoutUndo();
             player.AddComponent<PlayerFallRespawner>();
 
             Transform cameraTransform = Group("PlayerCamera", player.transform);
