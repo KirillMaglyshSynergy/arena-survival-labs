@@ -1,0 +1,10 @@
+{
+  "name": "ArenaSurvival.PlayModeTests",
+  "references": [
+    "ArenaSurvival.Core",
+    "Unity.InputSystem"
+  ],
+  "optionalUnityReferences": [
+    "TestAssemblies"
+  ]
+}
